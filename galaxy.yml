@@ -1,0 +1,17 @@
+namespace: qlik
+name: qlikview
+version: 0.1.0
+readme: README.md
+authors:
+  - Adam Haydon (https://github.com/ahaydon)
+description: Collection of roles for managing QlikView Enterprise server
+license:
+  - MIT
+tags:
+  - qlik
+  - qlikview
+repository: https://github.com/QlikProfessionalServices/ansible-qlikview-collection
+documentation: https://github.com/QlikProfessionalServices/ansible-qlikview-collection/wiki
+homepage: https://github.com/QlikProfessionalServices/ansible-qlikview-collection
+issues: https://github.com/QlikProfessionalServices/ansible-qlikview-collection/issues
+build_ignore: []

@@ -1,0 +1,41 @@
+---
+argument_specs:
+  main:
+    short_description: Run the QlikView setup
+    options:
+      setup_path:
+        type: path
+        required: true
+        description: Path of the QlikView setup file.
+
+      # Setup arguments
+
+      setup_username:
+        type: str
+        required: true
+        description: Adds the username to run the Qlik Sense services.
+
+      setup_password:
+        type: str
+        required: true
+        description: Adds the password to run the services.
+
+      setup_features:
+        type: list
+        default: [all]
+        choices:
+          - all
+          - DirectoryServiceConnector
+          - ManagementService
+          - QVS
+          - QvsDocs
+          - WebServer
+          - DistributionService
+          - SupportTools
+          - QvsClients
+          - Plugin
+          - AjaxZfc
+          - MsIIS
+          - QvTunnel
+          - QlikViewSettingsService
+        description: Includes the dashboard and visualization bundles.

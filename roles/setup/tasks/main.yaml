@@ -1,0 +1,34 @@
+- name: Install QlikView Enterprise Server
+  ansible.windows.win_package:
+    creates_service: QlikViewServiceDispatcher
+    path: "{{ setup_path }}"
+    arguments: >-
+      /s
+      /v"
+      /qn
+      Addlocal="{{ setup_features | join(',') }}"
+      IS_NET_API_LOGON_USERNAME="{{ setup_username }}"
+      IS_NET_API_LOGON_PASSWORD="{{ setup_password }}""
+      /clone_wait
+
+- name: Create QlikView Management API group
+  ansible.windows.win_group:
+    name: QlikView Management API
+
+- name: Add user to QlikView Management API group
+  ansible.windows.win_user:
+    name: "{{ ansible_user }}"
+    groups: QlikView Management API
+    groups_action: add
+
+- name: Start QlikView services
+  ansible.windows.win_service:
+    name: "{{ item }}"
+    state: started
+  loop:
+    - QlikViewServiceDispatcher
+    - QlikViewManagementService
+    - QlikViewDirectoryServiceConnector
+    - QlikViewServer
+    - QlikViewDistributionService
+    - QlikViewWebServer
