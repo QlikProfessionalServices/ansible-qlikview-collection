@@ -1,0 +1,29 @@
+---
+argument_specs:
+  main:
+    short_description: Main entrypoint for Qlik Sense download role
+    options:
+      release_name:
+        type: str
+        required: true
+        description:
+          - Name of the QlikView release to download. This value must match the name of a release
+            published at https://github.com/qlik-download/qlikview/releases.
+
+      download_path:
+        type: path
+        default: "{{ lookup('ansible.builtin.env', 'HOME') }}/Downloads"
+        description:
+          - Path to download the QlikView package to.
+
+      setup_path:
+        type: path
+        default: "{{ download_path }}/{{ release_name }}/QlikViewServer_x64Setup.exe"
+        description:
+          - Path of the QlikView setup file.
+
+      github_token:
+        type: str
+        required: false
+        description:
+          - Authentication token to allow for increased rate limit on GitHub APIs.

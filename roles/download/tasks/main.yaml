@@ -1,0 +1,75 @@
+---
+- name: Lookup QlikView release # noqa: run-once[task]
+  delegate_to: localhost
+  run_once: yes
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/qlik-download/qlikview/releases?page=1
+    headers:
+      Authorization: "{{ 'Bearer ' + github_token if github_token is defined else omit }}"
+  register: qlikview_releases
+
+- name: Page through releases # noqa: run-once[task]
+  delegate_to: localhost
+  run_once: yes
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/qlik-download/qlikview/releases?page={{ item }}
+    headers:
+      Authorization: "{% if github_token is defined %} Bearer {{ github_token | default('') }} {% endif %}"
+  register: qlikview_releases_pages
+  vars:
+    latest_result: "{{ qlikview_releases_pages | default(qlikview_releases) }}"
+    page_count: "{{ latest_result.link | regex_search('page=(\\d+)>; rel=\"last\"', '\\1') | first | int }}"
+  loop: "{{ range(2, page_count | int) }}"
+  when: >-
+    latest_result.json
+    | selectattr('prerelease', 'equalto', false)
+    | selectattr('name', 'equalto', release_name)
+    | length == 0
+  delay: 1
+
+- name: Set release facts
+  vars:
+    results: "{{ [qlikview_releases] + (qlikview_releases_pages.results | default([])) }}"
+    release: "{{ results | map(attribute='json', default=[]) | flatten
+      | selectattr('prerelease', 'equalto', false)
+      | selectattr('name', 'equalto', release_name)
+      | first }}"
+  ansible.builtin.set_fact:
+    release_name: "QlikView {{ release.name | split(' ') | slice(2) | first | join(' ') }}"
+    download_url: "{{ release.assets
+      | selectattr('name', 'equalto', 'QlikViewServer_x64Setup.exe')
+      | map(attribute='browser_download_url')
+      | flatten
+      | first }}"
+    checksum_url: "{{ release.assets
+      | selectattr('name', 'equalto', 'QlikViewServer_x64Setup.exe.md5')
+      | map(attribute='browser_download_url')
+      | flatten
+      | first }}"
+
+- name: Create setup directories # noqa: run-once[task]
+  delegate_to: localhost
+  run_once: yes
+  ansible.builtin.file:
+    path: "{{ setup_path | dirname }}"
+    state: directory
+    mode: "0700"
+
+- name: Download QlikView setup files # noqa: run-once[task]
+  delegate_to: localhost
+  run_once: yes
+  ansible.builtin.get_url:
+    url: "{{ download_url }}"
+    dest: "{{ setup_path }}"
+    checksum: "md5:{{ lookup('ansible.builtin.url', checksum_url) if checksum_url is defined }}"
+    mode: "0644"
+  register: downloads
+
+- name: Copy setup file to host
+  ansible.windows.win_copy:
+    dest: '{{ ansible_facts["user_dir"] }}\Downloads\{{ downloads.dest | basename }}'
+    src: "{{ downloads.dest }}"
+
+- name: Set download path facts
+  ansible.builtin.set_fact:
+    setup_path: '{{ ansible_facts["user_dir"] }}\Downloads\{{ setup_path | basename }}'
