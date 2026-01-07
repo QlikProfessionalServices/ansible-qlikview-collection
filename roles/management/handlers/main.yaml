@@ -1,0 +1,44 @@
+- name: Get QlikView Server services
+  ansible.windows.win_uri:
+    url: http://{{ management_hostname }}:4799/QMS/Service
+    url_method: post
+    use_default_credential: yes
+    headers:
+      SOAPACTION: http://ws.qliktech.com/QMS/12/IQMS/GetServices
+      X-Service-Key: "{{ qms_service_key }}"
+    content_type: text/xml;charset=utf-8
+    return_content: yes
+    body: |
+      <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+      <s:Body>
+        <GetServices xmlns="http://ws.qliktech.com/QMS/12/">
+          <serviceTypes>QlikViewServer</serviceTypes>
+        </GetServices>
+      </s:Body>
+      </s:Envelope>
+  listen: Restart QVS
+  register: get_service
+
+- name: Restart QlikView Server service
+  vars:
+    svc_id_regex: "<a:ID>(.*?)</a:ID>"
+    qvs_id: "{{ get_service.content | regex_search(svc_id_regex, '\\1') | first }}"
+  ansible.windows.win_uri:
+    url: http://{{ management_hostname }}:4799/QMS/Service
+    url_method: post
+    use_default_credential: yes
+    headers:
+      SOAPACTION: http://ws.qliktech.com/QMS/12/IQMS/RestartQVS
+      X-Service-Key: "{{ qms_service_key }}"
+    content_type: text/xml;charset=utf-8
+    return_content: yes
+    body: |
+      <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+      <s:Body>
+        <RestartQVS xmlns="http://ws.qliktech.com/QMS/12/">
+          <qvsID>{{ qvs_id }}</qvsID>
+        </RestartQVS>
+      </s:Body>
+      </s:Envelope>
+  listen: Restart QVS
+  changed_when: true

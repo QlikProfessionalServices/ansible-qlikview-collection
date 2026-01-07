@@ -1,0 +1,69 @@
+- name: Get QMS service key
+  ansible.windows.win_uri:
+    url: http://{{ management_hostname }}:4799/QMS/Service
+    url_method: post
+    use_default_credential: yes
+    headers:
+      SOAPACTION: http://ws.qliktech.com/QMS/12/IQMS/GetTimeLimitedServiceKey
+    content_type: text/xml;charset=utf-8
+    return_content: yes
+    body: |
+      <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+      <s:Body>
+        <GetTimeLimitedServiceKey xmlns="http://ws.qliktech.com/QMS/12/">
+        </GetTimeLimitedServiceKey>
+      </s:Body>
+      </s:Envelope>
+  register: service_key_result
+
+- name: Set service key fact
+  vars:
+    key_regex: <GetTimeLimitedServiceKeyResult>(.*?)</GetTimeLimitedServiceKeyResult>
+  ansible.builtin.set_fact:
+    qms_service_key: "{{ service_key_result.content | regex_search(key_regex, '\\1') | first }}"
+
+- name: Get QlikView license
+  ansible.windows.win_uri:
+    url: http://{{ management_hostname }}:4799/QMS/Service
+    url_method: post
+    use_default_credential: yes
+    headers:
+      SOAPACTION: http://ws.qliktech.com/QMS/12/4/IQMS4/GetLicenseOverview
+      X-Service-Key: "{{ qms_service_key }}"
+    content_type: text/xml;charset=utf-8
+    return_content: yes
+    body: |
+      <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+      <s:Body>
+        <GetLicenseOverview xmlns="http://ws.qliktech.com/QMS/12/4/">
+        </GetLicenseOverview>
+      </s:Body>
+      </s:Envelope>
+  register: license
+
+- name: Set QlikView license
+  ansible.windows.win_uri:
+    url: http://{{ management_hostname }}:4799/QMS/Service
+    url_method: post
+    use_default_credential: yes
+    headers:
+      SOAPACTION: http://ws.qliktech.com/QMS/12/5/IQMS5/SaveNewLicenseEx
+      X-Service-Key: "{{ qms_service_key }}"
+    content_type: text/xml;charset=utf-8
+    return_content: yes
+    body: >-
+      <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+      <s:Body>
+        <SaveNewLicenseEx xmlns="http://ws.qliktech.com/QMS/12/5/">
+          <license xmlns:q114="http://schemas.datacontract.org/2004/07/PIX.QMSAPI.DataObjects">
+            <q114:LicenseType>QlikViewServer</q114:LicenseType>
+            <q114:SignedKey>{{ qlikview_slk }}</q114:SignedKey>
+          </license>
+        </SaveNewLicenseEx>
+      </s:Body>
+      </s:Envelope>
+  when: qlikview_slk is defined and license.content is not regex('<a:LicenseKey>(.*?)</a:LicenseKey>')
+  changed_when: true
+  failed_when: newlicense.content | regex_search('<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>(.*?)</s:Body></s:Envelope>', '\\1') is none
+  notify: Restart QVS
+  register: newlicense

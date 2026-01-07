@@ -1,0 +1,17 @@
+---
+argument_specs:
+  main:
+    short_description: Main entrypoint for Qlik Sense download role
+    options:
+      management_hostname:
+        type: str
+        default: "{{ ansible_facts.hostname | default(ansible_host) }}"
+        description:
+          - Hostname of the server where the management service is running.
+            (defaults to the ansible host).
+
+      qlikview_slk:
+        type: str
+        required: true
+        description:
+          - License key to use for the site.
