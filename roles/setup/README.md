@@ -12,7 +12,7 @@ Role Variables
 --------------
 
 ```yaml
-setup_path: '{{ ansible_env.HOME }}\Downloads\Qlik_Sense_setup.exe'
+setup_path: '{{ ansible_env.HOME }}\Downloads\QlikViewServer_x64Setup.exe'
 setup_username: '{{ ansible_netbios_name }}\qvservice'
 setup_password: "Qlik1234"
 setup_features: [all]
